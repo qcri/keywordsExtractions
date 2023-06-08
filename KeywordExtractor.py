@@ -19,6 +19,11 @@ import requests
 import os
 
 
+'''
+To use Arabic, register on farasa website and get an API key
+https://farasa.qcri.org
+'''
+
 def isPunct(word):
   return len(word) == 1 and word in string.punctuation
 
@@ -29,12 +34,10 @@ def isNumeric(word):
   except ValueError:
     return False
 
-def farasa_POStagger(text):
-    '''
-    Register to farasa and 
-    '''
+def farasa_POStagger(text, farasa_api_key):
+
     url = 'https://farasa.qcri.org/webapi/pos/'
-    payload = {'text': text, 'api_key': os.environ["FARASA_API_KEY"],}
+    payload = {'text': text, 'api_key': farasa_api_key}
     data = requests.post(url, data=payload)
     result = json.loads(data.text)
     #print(result)
@@ -63,10 +66,10 @@ def loadStopwords(filename):
         mylist.append(line)
     return mylist
 
-def format_POS_tagged_data(text):
+def format_POS_tagged_data(text, farasa_api_key):
     stopwords = set(loadStopwords('nltk_stopwords_ara.txt')).union(set(nltk.corpus.stopwords.words()))
     all_data = ''
-    for t in farasa_POStagger(text):
+    for t in farasa_POStagger(text, farasa_api_key):
         if t['surface'].replace('+','') in stopwords or ( 'NOUN' not in t['POS']) or 'PRON' in t['POS'] or 'PREP' in t['POS'] or 'CONJ' in t['POS']: #'V' not in t['POS'] or
             all_data += ' | '
         else:
@@ -142,8 +145,8 @@ class RakeKeywordExtractor:
       return map(lambda x: x[0],
         sorted_phrase_scores[0:int(n_phrases/self.top_fraction)])
 
-  def extractArabic(self, text, incl_scores=False):
-      return self.extract(format_POS_tagged_data(text),incl_scores)
+  def extractArabic(self, text,api_key, incl_scores=False):
+      return self.extract(format_POS_tagged_data(text,api_key),incl_scores)
 
 def test():
   rake = RakeKeywordExtractor()
@@ -159,7 +162,7 @@ all the considered types of systems and systems of mixed types.
   """, incl_scores=True)
   print(keywords)
   
-def testAra():
+def testAra(api_key):
   rake = RakeKeywordExtractor()
   doc = """جنبلاط: الحكومة اللبنانية ستنفجر عاجلا ام اجلا 
   بيروت 16-8 اف ب قبر  لبنان سياسة 
@@ -177,10 +180,11 @@ def testAra():
   ومن المقرر ان يشارك جنبلاط في وقت لاحق اليوم في المؤتمر الوطني للحريات العامة الذي ينظمه حزبه وتجمعات ديموقراطية ومسيحية وعلمانية. 
   نحو 50 شخصا يتظاهرون امام بيت الشرق في القدس القدس 16-8 اف ب - تظاهر حوالى خمسين شخصا، فلسطينيون وبضعة اجانب، ظهر اليوم"""
   
-  keywords = rake.extractArabic(doc, incl_scores=True)
+  keywords = rake.extractArabic(doc,api_key, incl_scores=True)
   print(keywords)
 
 if __name__ == "__main__":
+  farasa_api_key = os.environ["FARASA_API_KEY"]
   test()
-  testAra()
+  testAra(farasa_api_key)
 
